@@ -1,20 +1,17 @@
 import { NestFactory, Reflector } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ClassSerializerInterceptor, INestApplication, Logger, RequestMethod, ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from "helmet"
 import * as dotenv from 'dotenv';
 
 const logger = new Logger()
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  app.setGlobalPrefix('api', {
-    exclude: [{ path: 'health', method: RequestMethod.GET }],
-  });
 
   const NODE_ENV: string = process.env.NODE_ENV || 'local';
-  const PORT: string = process.env.NODE_ENV || "3000"
+  const PORT: string = process.env.PORT || "3000"
   dotenv.config({ path: `config/env/${NODE_ENV}.env` });
+  const app = await NestFactory.create(AppModule);
 
   const config = new DocumentBuilder()
     .addBearerAuth()

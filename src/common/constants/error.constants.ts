@@ -1,3 +1,3 @@
-export const customErrorMessages: any = {
+export const customErrorMessages = {
     INTERNAL_SERVER_ERROR: "Internal Server Error"
 }
