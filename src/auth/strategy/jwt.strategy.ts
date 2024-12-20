@@ -1,7 +1,9 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { PassportStrategy } from "@nestjs/passport";
+import { isValidObjectId } from "mongoose";
 import { Strategy, ExtractJwt } from 'passport-jwt'
+import { customErrorMessages } from "../../common/constants/error.constants";
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -14,7 +16,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     }
 
     async validate(payload: any) {
-        return { userId: payload.id }
+        if (!isValidObjectId(payload.id)) {
+            throw new UnauthorizedException(customErrorMessages.UNAUTHORIZED_USER)
+        }
+        return { id: payload.id }
     }
 
 }
