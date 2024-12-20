@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpException, HttpStatus, Put, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, HttpException, HttpStatus, Post, Put, Req, UseGuards } from "@nestjs/common";
 import { ResponseDto } from "../common/dto/reponse.dto";
 import { UserService } from "./user.service";
 import { userSuccessMessages } from "../common/constants/success.constants";
@@ -50,6 +50,50 @@ export class UserController {
                 statusCode: 200,
                 data: {},
                 message: userSuccessMessages.USER_DETAILS_UPDATE_SUCCESS
+            }
+        } catch (error) {
+            throw new HttpException({
+                statusCode: error?.status || HttpStatus.INTERNAL_SERVER_ERROR, data: {}, message: error?.message || customErrorMessages.INTERNAL_SERVER_ERROR
+            }, HttpStatus.INTERNAL_SERVER_ERROR)
+        }
+    }
+
+    /**
+     * Controller function to approve user consent
+     * @param req 
+     * @param userDetails 
+     * @returns 
+     */
+    @Post('consent/approve')
+    async approveUserConsent(@Req() req: any): Promise<ResponseDto> {
+        try {
+            await this.userService.approveUserConsent(req.user.id)
+            return {
+                statusCode: 200,
+                data: {},
+                message: userSuccessMessages.USER_CONSENT_APPROVE
+            }
+        } catch (error) {
+            throw new HttpException({
+                statusCode: error?.status || HttpStatus.INTERNAL_SERVER_ERROR, data: {}, message: error?.message || customErrorMessages.INTERNAL_SERVER_ERROR
+            }, HttpStatus.INTERNAL_SERVER_ERROR)
+        }
+    }
+
+    /**
+     * Controller function to withdraw user consent
+     * @param req 
+     * @param userDetails 
+     * @returns 
+     */
+    @Put('consent/withdraw')
+    async withdrawUserConsent(@Req() req: any): Promise<ResponseDto> {
+        try {
+            await this.userService.withdrawUserConsent(req.user.id)
+            return {
+                statusCode: 200,
+                data: {},
+                message: userSuccessMessages.USER_CONSENT_WITHDRAW
             }
         } catch (error) {
             throw new HttpException({
