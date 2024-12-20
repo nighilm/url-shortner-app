@@ -1,0 +1,17 @@
+version: '3'
+
+services:
+
+  url-shortner-app:
+    build:
+      context: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
