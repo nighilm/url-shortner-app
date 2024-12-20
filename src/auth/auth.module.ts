@@ -17,13 +17,6 @@ import { User, UserSchema } from './entities/user.schema';
     JwtModule, ConfigModule,
     ConfigModule.forFeature(googleOauthConfig),
     PassportModule.register({ defaultStrategy: 'jwt' }),
-    JwtModule.registerAsync({
-      imports: [ConfigModule.forRoot()],
-      useFactory: async (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET')
-      }),
-      inject: [ConfigService],
-    }),
     MongooseModule.forFeature([
       { name: User.name, schema: UserSchema },
     ]),

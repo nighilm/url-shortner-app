@@ -19,6 +19,8 @@ export class User extends Document {
     @Prop({ required: false })
     refreshToken: string
 
+    @Prop({ default: false })
+    hasConsent: boolean
 }
 
 export const UserSchema = SchemaFactory.createForClass(User)
