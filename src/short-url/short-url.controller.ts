@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpException, HttpStatus, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, HttpException, HttpStatus, Param, Post, Req, Res, UseGuards } from "@nestjs/common";
 import { ResponseDto } from "../common/dto/reponse.dto";
 import { userSuccessMessages } from "../common/constants/success.constants";
 import { customErrorMessages } from "../common/constants/error.constants";
@@ -8,13 +8,15 @@ import { ShortURLService } from "./short-url.service";
 import { CreateTopicDto } from "./dto/topic.dto";
 import { CreateShortURLDto } from "./dto/short-url.dto";
 import { CustomThrottlerGuard } from "src/auth/guards/throttle.guard";
+import { AnalyticsService } from "./analytics/analytics.service";
 
 @ApiBearerAuth()
 @Controller('shorten')
 @UseGuards(JwtAuthGuard)
 export class ShortURLController {
     constructor(
-        private shortURLService: ShortURLService
+        private shortURLService: ShortURLService,
+        private analyticsService: AnalyticsService
     ) { }
 
     /**
@@ -75,6 +77,19 @@ export class ShortURLController {
                 data: { result },
                 message: userSuccessMessages.USER_DETAILS_FETCH_SUCCESS
             }
+        } catch (error) {
+            throw new HttpException({
+                statusCode: error?.status || HttpStatus.INTERNAL_SERVER_ERROR, data: {}, message: error?.message || customErrorMessages.INTERNAL_SERVER_ERROR
+            }, HttpStatus.INTERNAL_SERVER_ERROR)
+        }
+    }
+
+    @Get(':alias')
+    async redirectShortURL(@Req() req: Request, @Param("alias") alias: string, @Res() res: any) {
+        try {
+            const { shortURLId, longURL } = await this.shortURLService.redirectShortURL(alias, req)
+            await this.analyticsService.createAnalyticsLog(req, shortURLId)
+            return res.redirect(longURL)
         } catch (error) {
             throw new HttpException({
                 statusCode: error?.status || HttpStatus.INTERNAL_SERVER_ERROR, data: {}, message: error?.message || customErrorMessages.INTERNAL_SERVER_ERROR

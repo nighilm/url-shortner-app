@@ -9,10 +9,13 @@ import { ShortURLController } from './short-url.controller';
 import { ShortURLService } from './short-url.service';
 import { ShortURL, ShortURLSchema } from './entities/short-url.schema';
 import { RedisService } from '../redis/redis.service';
+import { AnalyticsService } from './analytics/analytics.service';
+import { AnalyticsLog, AnalyticsLogSchema } from './analytics/entities/analyticsLog.schema';
+import { Analytics, AnalyticsSchema } from './analytics/entities/analytics.schema';
 
 @Module({
     controllers: [ShortURLController],
-    providers: [ShortURLService, RedisService],
+    providers: [ShortURLService, RedisService, AnalyticsService],
     imports: [
         JwtModule, ConfigModule,
         PassportModule.register({ defaultStrategy: 'jwt' }),
@@ -20,6 +23,8 @@ import { RedisService } from '../redis/redis.service';
             { name: User.name, schema: UserSchema },
             { name: Topic.name, schema: TopicSchema },
             { name: ShortURL.name, schema: ShortURLSchema },
+            { name: AnalyticsLog.name, schema: AnalyticsLogSchema },
+            { name: Analytics.name, schema: AnalyticsSchema },
         ]),
     ],
 

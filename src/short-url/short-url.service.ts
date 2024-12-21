@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger, } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger, NotFoundException, } from "@nestjs/common";
 import { User } from "../auth/entities/user.schema";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model, Types } from "mongoose";
@@ -7,6 +7,7 @@ import { ShortURL } from "./entities/short-url.schema";
 import { CreateShortURLDto, ShortURLResponseDto } from "./dto/short-url.dto";
 import { RedisService } from "src/redis/redis.service";
 import ShortUniqueId from "short-unique-id";
+import { generateShortURLCacheKey } from "src/common/helpers/short-url.helpers";
 
 @Injectable()
 export class ShortURLService {
@@ -81,8 +82,26 @@ export class ShortURLService {
             alias,
             topic,
         });
-
+        let key: string = generateShortURLCacheKey(alias)
+        await this.redis.set(key, JSON.stringify({ shortURLId: shortURLCreate.id, longURL }), 200)
         return { shortURL, createdAt: shortURLCreate.createdAt };
+    }
+
+    async redirectShortURL(alias: string, request: any) {
+        let key: string = generateShortURLCacheKey(alias)
+
+        const cachedData: any = await this.redis.get(key);
+        if (cachedData && cachedData?.longURL) {
+            return cachedData
+        }
+
+        let shortURLData: ShortURL = await this.shortURLModel.findOne({ alias }, { longURL: 1 })
+        if (!shortURLData) {
+            throw new NotFoundException("URL not found")
+        }
+
+        await this.redis.set(key, JSON.stringify({ shortURLId: shortURLData.id, longURL: shortURLData.longURL }), 200)
+        return { shortURLId: shortURLData.id, longURL: shortURLData.longURL }
     }
 
 }
