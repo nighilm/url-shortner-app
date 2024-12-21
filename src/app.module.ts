@@ -1,24 +1,24 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from './auth/auth.module';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { UserModule } from './user/user.module';
+import { ShortURLModule } from './short-url/short-url.module';
+import { mongooseConnectOptions } from './configuration/mongoDb.config';
+import { envFileConfigOptions } from './configuration/environment.config';
+import { RedisModule } from './redis/redis.module';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { throttlerConfigOptions } from './configuration/throttler.config';
 
 @Module({
   imports: [
     AuthModule,
     UserModule,
-    ConfigModule.forRoot({
-      isGlobal: true,
-      envFilePath: `${process.cwd()}/config/env/${process.env.NODE_ENV}.env`
-    }),
-    MongooseModule.forRootAsync({
-      imports: [ConfigModule.forRoot()],
-      useFactory: async (configService: ConfigService) => ({
-        uri: configService.get<string>('MONGO_DB_URI')
-      }),
-      inject: [ConfigService]
-    }),
+    ShortURLModule,
+    ConfigModule.forRoot(envFileConfigOptions),
+    MongooseModule.forRootAsync(mongooseConnectOptions),
+    RedisModule,
+    ThrottlerModule.forRootAsync(throttlerConfigOptions),
   ],
   controllers: [],
   providers: [],
