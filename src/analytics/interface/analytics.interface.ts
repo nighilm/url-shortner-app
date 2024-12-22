@@ -27,3 +27,7 @@ export interface AnalysticsTopicResponse extends AnalysticsResponse {
         uniqueClicks: number
     }[]
 }
+
+export interface AnalysticsOverallResponse extends AnalysticsAliasResponse {
+    totalURLs: number
+}

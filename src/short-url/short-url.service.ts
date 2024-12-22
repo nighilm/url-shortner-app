@@ -87,10 +87,18 @@ export class ShortURLService {
         });
         let key: string = generateRedisCacheKey(alias, RedisCacheNames.ShortURL)
         await this.redis.set(key, JSON.stringify({ shortURLId: shortURLCreate.id, longURL }), 200)
+
+        const topicRecord: Topic = await this.topicModel.findById(topicId)
+        let redisKeyClear: string[] = [
+            `${RedisCacheNames.Analytics}:overall:${userId}`,
+            `${RedisCacheNames.Analytics}:topic:${topicRecord.name}`
+        ]
+        await this.redis.delMultiple(redisKeyClear)
+
         return { shortURL, createdAt: shortURLCreate.createdAt };
     }
 
-    async redirectShortURL(alias: string, request: any) {
+    async redirectShortURL(alias: string) {
         let key: string = generateRedisCacheKey(alias, RedisCacheNames.ShortURL)
 
         const cachedData: any = await this.redis.get(key);

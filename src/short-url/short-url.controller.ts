@@ -87,7 +87,7 @@ export class ShortURLController {
     @Get(':alias')
     async redirectShortURL(@Req() req: Request, @Param("alias") alias: string, @Res() res: any) {
         try {
-            const { shortURLId, longURL } = await this.shortURLService.redirectShortURL(alias, req)
+            const { shortURLId, longURL } = await this.shortURLService.redirectShortURL(alias)
             await this.analyticsService.createAnalyticsLog(req, shortURLId)
             return res.redirect(longURL)
         } catch (error) {

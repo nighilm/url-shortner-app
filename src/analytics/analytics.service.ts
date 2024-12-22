@@ -6,7 +6,7 @@ import { InjectModel } from "@nestjs/mongoose";
 import { Analytics } from "./entities/analytics.schema";
 import { ShortURL } from "../short-url/entities/short-url.schema";
 import { analyticsErrorMessages } from "../common/constants/error.constants";
-import { AnalysticsAliasResponse, AnalysticsTopicResponse } from "./interface/analytics.interface";
+import { AnalysticsAliasResponse, AnalysticsOverallResponse, AnalysticsTopicResponse } from "./interface/analytics.interface";
 import { generateRedisCacheKey } from "../common/helpers/redis.helpers";
 import { RedisCacheNames } from "../common/enum/cacheTypes.enum";
 import { RedisService } from "../redis/redis.service";
@@ -51,6 +51,34 @@ export class AnalyticsService {
             }
             analyticsRecord.save()
         }
+
+        const shortURLrecord: any[] = await this.shortURLModel.aggregate([
+            {
+                $match: { _id: shortURLId }
+            },
+            {
+                $lookup: {
+                    from: "topics",
+                    as: "topics",
+                    foreignField: "_id",
+                    localField: "topicId"
+                }
+            },
+            {
+                $project: {
+                    _id: 0,
+                    alias: 1,
+                    topic: { $arrayElemAt: ["$topics.name", 0] },
+                }
+            }
+        ])
+
+        let redisKeyClear: string[] = [
+            `${RedisCacheNames.Analytics}:overall:${userId}`,
+            `${RedisCacheNames.Analytics}:alias:${shortURLrecord[0]?.alias}`,
+            `${RedisCacheNames.Analytics}:topic:${shortURLrecord[0]?.topic}`
+        ]
+        await this.redis.delMultiple(redisKeyClear)
     }
 
     /**
@@ -72,15 +100,15 @@ export class AnalyticsService {
         }
         const result: AnalysticsAliasResponse[] = await this.shortURLModel.aggregate([
             {
+                $match: { alias },
+            },
+            {
                 $lookup: {
                     from: 'analyticslogs',
                     as: 'analyticslogs',
                     localField: '_id',
                     foreignField: 'shortURLId',
                 }
-            },
-            {
-                $match: { alias },
             },
             {
                 $lookup: {
@@ -208,13 +236,16 @@ export class AnalyticsService {
             return cachedData
         }
 
-        const topicRecord: ShortURL = await this.topicModel.findOne({ name: topic })
+        const topicRecord: Topic = await this.topicModel.findOne({ name: topic })
 
         if (!topicRecord) {
             throw new NotFoundException(analyticsErrorMessages.TOPIC_NOT_FOUND)
         }
 
         const result: AnalysticsTopicResponse[] = await this.shortURLModel.aggregate([
+            {
+                $match: { topicId: topicRecord._id },
+            },
             {
                 $lookup: {
                     from: 'analyticslogs',
@@ -224,12 +255,8 @@ export class AnalyticsService {
                 }
             },
             {
-                $match: { topicId: topicRecord._id },
-            },
-            {
                 $unwind: "$analyticslogs"
             },
-
             {
                 $facet: {
                     counts: [
@@ -298,4 +325,165 @@ export class AnalyticsService {
 
         return result[0]
     }
+
+    /**
+     * Function to create overall analytics report for user
+     * @param topic 
+     * @returns AnalysticsAliasResponse
+     */
+    async getOverallAnalytics(userId: string | Types.ObjectId): Promise<any> {
+        let key: string = generateRedisCacheKey(`overall:${userId}`, RedisCacheNames.Analytics)
+        userId = new Types.ObjectId(userId)
+
+        const cachedData: any = await this.redis.get(key);
+        if (cachedData) {
+            return cachedData
+        }
+
+        let result: AnalysticsOverallResponse[] = await this.shortURLModel.aggregate([
+            {
+                $match: { userId },
+            },
+            {
+                $lookup: {
+                    from: 'analyticslogs',
+                    as: 'analyticslogs',
+                    localField: '_id',
+                    foreignField: 'shortURLId',
+                }
+            },
+            {
+                $lookup: {
+                    from: 'analytics',
+                    as: 'analytics',
+                    localField: '_id',
+                    foreignField: 'shortURLId',
+                    pipeline: [
+                        {
+                            $project: {
+                                totalClicks: 1,
+                                uniqueClicks: 1,
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                $unwind: "$analyticslogs"
+            },
+            {
+                $facet: {
+                    urls: [
+                        {
+                            $group: {
+                                _id: null,
+                                totalURLs: { $addToSet: "$_id" },
+                            }
+                        },
+                        {
+                            $project: {
+                                totalURLs: { $size: "$totalURLs" },
+                                _id: 0
+                            }
+                        }
+                    ],
+                    osType: [
+                        {
+                            $group: {
+                                _id: "$analyticslogs.osType",
+                                uniqueClicks: { $addToSet: "$analyticslogs.userId" },
+                                totalClicks: { $sum: 1 }
+                            }
+                        },
+                        {
+                            $project: {
+                                osName: "$_id",
+                                uniqueClicks: { $size: "$uniqueClicks" },
+                                uniqueUsers: { $size: "$uniqueClicks" },
+                                totalClicks: 1,
+                                _id: 0
+                            }
+                        }
+                    ],
+                    deviceType: [
+                        {
+                            $group: {
+                                _id: "$analyticslogs.deviceType",
+                                uniqueClicks: { $addToSet: "$analyticslogs.userId" },
+                                totalClicks: { $sum: 1 }
+                            }
+                        },
+                        {
+                            $project: {
+                                deviceName: "$_id",
+                                uniqueClicks: { $size: "$uniqueClicks" },
+                                uniqueUsers: { $size: "$uniqueClicks" },
+                                totalClicks: 1,
+                                _id: 0
+                            }
+                        }
+                    ],
+                    analytics: [
+                        {
+                            $group: {
+                                _id: null,
+                                uniqueClicks: { $addToSet: "$analyticslogs.userId" },
+                                totalClicks: { $sum: 1 }
+                            }
+                        },
+                        {
+                            $project: {
+                                uniqueClicks: { $size: "$uniqueClicks" },
+                                totalClicks: { $sum: "$totalClicks" },
+                                _id: 0
+                            }
+                        },
+                    ],
+                    clickByDate: [
+                        {
+                            $group: {
+                                _id: { $dateToString: { format: "%Y-%m-%d", date: "$analyticslogs.createdAt" } },
+                                totalClicks: { $sum: 1 }
+                            }
+                        },
+                        {
+                            $sort: { "_id": -1 }
+                        },
+                        {
+                            $project: {
+                                date: "$_id",
+                                clickCount: "$totalClicks",
+                                _id: 0
+                            }
+                        },
+                    ]
+                }
+            },
+            {
+                $project: {
+
+                    osType: 1,
+                    deviceType: 1,
+                    uniqueClicks: { $arrayElemAt: ["$analytics.uniqueClicks", 0] },
+                    totalClicks: { $arrayElemAt: ["$analytics.totalClicks", 0] },
+                    clickByDate: 1,
+                    totalURLs: { $arrayElemAt: ["$urls.totalURLs", 0] }
+                }
+            }
+        ])
+        let urlCount: any[] = await this.shortURLModel.aggregate([
+            {
+                $match: { userId },
+            },
+            {
+                $count: "totalURLs"
+            }
+        ])
+        result[0].totalURLs = urlCount[0].totalURLs
+
+        await this.redis.set(key, JSON.stringify(result[0]), 200)
+
+        return result
+    }
+
 }

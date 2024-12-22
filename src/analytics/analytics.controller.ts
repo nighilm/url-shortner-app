@@ -1,4 +1,4 @@
-import { Controller, Get, HttpException, HttpStatus, Param, UseGuards } from "@nestjs/common";
+import { Controller, Get, HttpException, HttpStatus, Param, Req, UseGuards } from "@nestjs/common";
 import { AnalyticsService } from "./analytics.service";
 import { JwtAuthGuard } from "src/auth/guards/jwt.guard";
 import { ApiBearerAuth } from "@nestjs/swagger";
@@ -20,7 +20,7 @@ export class AnalyticsController {
      * @param alias
      * @returns AnalysticsAliasResponse
      */
-    @Get(':alias')
+    @Get('alias/:alias')
     async getAliasAnalytics(@Param("alias") alias: string): Promise<ResponseDto> {
         try {
             const analyticsResult: AnalysticsAliasResponse = await this.analyticsService.getAliasAnalytics(alias)
@@ -45,6 +45,27 @@ export class AnalyticsController {
     async getTopicAnalytics(@Param("topic") topic: string): Promise<ResponseDto> {
         try {
             const analyticsResult: AnalysticsTopicResponse = await this.analyticsService.getTopicAnalytics(topic)
+            return {
+                statusCode: 200,
+                data: { analyticsResult },
+                message: analyticsSuccessMessages.ANALYTICS_FETCH_SUCCESS_TOPIC
+            }
+        } catch (error) {
+            throw new HttpException({
+                statusCode: error?.status || HttpStatus.INTERNAL_SERVER_ERROR, data: {}, message: error?.message || customErrorMessages.INTERNAL_SERVER_ERROR
+            }, HttpStatus.INTERNAL_SERVER_ERROR)
+        }
+    }
+
+    /**
+     * Controller function to create overall analytics report for user
+     * @param topic
+     * @returns AnalysticsTopicResponse
+     */
+    @Get('overall')
+    async getOverallAnalytics(@Req() req: any): Promise<ResponseDto> {
+        try {
+            const analyticsResult: any = await this.analyticsService.getOverallAnalytics(req.user?.id)
             return {
                 statusCode: 200,
                 data: { analyticsResult },

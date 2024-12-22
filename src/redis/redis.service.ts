@@ -19,4 +19,14 @@ export class RedisService {
         const jsonData: string | undefined = await this.cacheManager.get<string>(key);
         return jsonData ? JSON.parse(jsonData!) : undefined;
     }
+
+    async del(key: string): Promise<any> {
+        await this.cacheManager.del(key);
+    }
+
+    async delMultiple(keys: string[]): Promise<any> {
+        for (const key of keys) {
+            await this.cacheManager.del(key);
+        }
+    }
 }
