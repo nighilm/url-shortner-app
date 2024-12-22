@@ -9,9 +9,9 @@ import { ShortURLController } from './short-url.controller';
 import { ShortURLService } from './short-url.service';
 import { ShortURL, ShortURLSchema } from './entities/short-url.schema';
 import { RedisService } from '../redis/redis.service';
-import { AnalyticsService } from './analytics/analytics.service';
-import { AnalyticsLog, AnalyticsLogSchema } from './analytics/entities/analyticsLog.schema';
-import { Analytics, AnalyticsSchema } from './analytics/entities/analytics.schema';
+import { AnalyticsService } from '../analytics/analytics.service';
+import { AnalyticsLog, AnalyticsLogSchema } from '../analytics/entities/analyticsLog.schema';
+import { Analytics, AnalyticsSchema } from '../analytics/entities/analytics.schema';
 
 @Module({
     controllers: [ShortURLController],

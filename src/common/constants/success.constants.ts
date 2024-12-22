@@ -8,3 +8,7 @@ export const userSuccessMessages = {
     USER_CONSENT_APPROVE: "User has given their consent",
     USER_CONSENT_WITHDRAW: "User has withdrawn their consent",
 }
+
+export const analyticsSuccessMessages = {
+    ANALYTICS_FETCH_SUCCESS_ALIAS: "Analytics for the alias have been successfully fetched"
+}

@@ -8,7 +8,7 @@ import { ShortURLService } from "./short-url.service";
 import { CreateTopicDto } from "./dto/topic.dto";
 import { CreateShortURLDto } from "./dto/short-url.dto";
 import { CustomThrottlerGuard } from "src/auth/guards/throttle.guard";
-import { AnalyticsService } from "./analytics/analytics.service";
+import { AnalyticsService } from "../analytics/analytics.service";
 
 @ApiBearerAuth()
 @Controller('shorten')

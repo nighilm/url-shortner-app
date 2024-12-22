@@ -6,3 +6,7 @@ export const customErrorMessages = {
 export const userErrorMessages = {
     USER_NOT_FOUND: "User not found"
 }
+
+export const analyticsErrorMessages = {
+    ALIAS_NOT_FOUND: "The alias could not be found"
+}

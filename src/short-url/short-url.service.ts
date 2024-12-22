@@ -7,7 +7,8 @@ import { ShortURL } from "./entities/short-url.schema";
 import { CreateShortURLDto, ShortURLResponseDto } from "./dto/short-url.dto";
 import { RedisService } from "src/redis/redis.service";
 import ShortUniqueId from "short-unique-id";
-import { generateShortURLCacheKey } from "src/common/helpers/short-url.helpers";
+import { generateRedisCacheKey } from "../common/helpers/redis.helpers";
+import { RedisCacheNames } from "src/common/enum/cacheTypes.enum";
 
 @Injectable()
 export class ShortURLService {
@@ -82,13 +83,13 @@ export class ShortURLService {
             alias,
             topic,
         });
-        let key: string = generateShortURLCacheKey(alias)
+        let key: string = generateRedisCacheKey(alias, RedisCacheNames.ShortURL)
         await this.redis.set(key, JSON.stringify({ shortURLId: shortURLCreate.id, longURL }), 200)
         return { shortURL, createdAt: shortURLCreate.createdAt };
     }
 
     async redirectShortURL(alias: string, request: any) {
-        let key: string = generateShortURLCacheKey(alias)
+        let key: string = generateRedisCacheKey(alias, RedisCacheNames.ShortURL)
 
         const cachedData: any = await this.redis.get(key);
         if (cachedData && cachedData?.longURL) {
