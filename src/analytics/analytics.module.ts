@@ -9,6 +9,7 @@ import { Analytics, AnalyticsSchema } from './entities/analytics.schema';
 import { ShortURL, ShortURLSchema } from '../short-url/entities/short-url.schema';
 import { AnalyticsController } from './analytics.controller';
 import { RedisModule } from '../redis/redis.module';
+import { Topic, TopicSchema } from '../short-url/entities/topic.schema';
 
 @Module({
     controllers: [AnalyticsController],
@@ -21,6 +22,7 @@ import { RedisModule } from '../redis/redis.module';
             { name: AnalyticsLog.name, schema: AnalyticsLogSchema },
             { name: Analytics.name, schema: AnalyticsSchema },
             { name: ShortURL.name, schema: ShortURLSchema },
+            { name: Topic.name, schema: TopicSchema },
         ]),
     ],
 

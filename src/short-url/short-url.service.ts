@@ -52,6 +52,7 @@ export class ShortURLService {
      */
     async createShortURL(userId: string | Types.ObjectId, baseURL: string, { longURL, customAlias, topic }: CreateShortURLDto): Promise<ShortURLResponseDto> {
         userId = new Types.ObjectId(userId)
+        const topicId = new Types.ObjectId(topic)
         const { randomUUID } = new ShortUniqueId({ length: 8 });
 
         let alias: string = customAlias
@@ -80,8 +81,9 @@ export class ShortURLService {
         const shortURLCreate: ShortURL = await this.shortURLModel.create({
             longURL,
             userId,
+            shortURL,
             alias,
-            topic,
+            topicId,
         });
         let key: string = generateRedisCacheKey(alias, RedisCacheNames.ShortURL)
         await this.redis.set(key, JSON.stringify({ shortURLId: shortURLCreate.id, longURL }), 200)

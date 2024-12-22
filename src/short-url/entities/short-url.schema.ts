@@ -9,6 +9,9 @@ export class ShortURL extends Document {
     @Prop({ required: true })
     longURL: string;
 
+    @Prop({ required: true })
+    shortURL: string;
+
     @Prop({ required: true, unique: true })
     alias: string;
 

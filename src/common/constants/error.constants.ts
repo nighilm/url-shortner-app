@@ -8,5 +8,6 @@ export const userErrorMessages = {
 }
 
 export const analyticsErrorMessages = {
-    ALIAS_NOT_FOUND: "The alias could not be found"
+    ALIAS_NOT_FOUND: "The alias could not be found",
+    TOPIC_NOT_FOUND: "The topic could not be found"
 }

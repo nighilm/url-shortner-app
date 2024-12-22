@@ -10,5 +10,6 @@ export const userSuccessMessages = {
 }
 
 export const analyticsSuccessMessages = {
-    ANALYTICS_FETCH_SUCCESS_ALIAS: "Analytics for the alias have been successfully fetched"
+    ANALYTICS_FETCH_SUCCESS_ALIAS: "Analytics for the alias have been successfully fetched",
+    ANALYTICS_FETCH_SUCCESS_TOPIC: "Analytics for the topic have been successfully fetched"
 }

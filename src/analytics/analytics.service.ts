@@ -6,10 +6,11 @@ import { InjectModel } from "@nestjs/mongoose";
 import { Analytics } from "./entities/analytics.schema";
 import { ShortURL } from "../short-url/entities/short-url.schema";
 import { analyticsErrorMessages } from "../common/constants/error.constants";
-import { AnalysticsResponse } from "./interface/analytics.interface";
+import { AnalysticsAliasResponse, AnalysticsTopicResponse } from "./interface/analytics.interface";
 import { generateRedisCacheKey } from "../common/helpers/redis.helpers";
 import { RedisCacheNames } from "../common/enum/cacheTypes.enum";
 import { RedisService } from "../redis/redis.service";
+import { Topic } from "../short-url/entities/topic.schema";
 
 
 @Injectable()
@@ -18,6 +19,7 @@ export class AnalyticsService {
         @InjectModel(AnalyticsLog.name) private analyticsLogModel: Model<AnalyticsLog>,
         @InjectModel(Analytics.name) private analyticsModel: Model<Analytics>,
         @InjectModel(ShortURL.name) private shortURLModel: Model<ShortURL>,
+        @InjectModel(Topic.name) private topicModel: Model<Topic>,
         private readonly redis: RedisService
     ) { }
 
@@ -54,9 +56,9 @@ export class AnalyticsService {
     /**
      * Function to create analytics report for alias provided
      * @param alias 
-     * @returns AnalysticsResponse
+     * @returns AnalysticsAliasResponse
      */
-    async getAliasAnalytics(alias: string): Promise<AnalysticsResponse> {
+    async getAliasAnalytics(alias: string): Promise<AnalysticsAliasResponse> {
         let key: string = generateRedisCacheKey(`alias:${alias}`, RedisCacheNames.Analytics)
 
         const cachedData: any = await this.redis.get(key);
@@ -68,7 +70,7 @@ export class AnalyticsService {
         if (!shortURL) {
             throw new NotFoundException(analyticsErrorMessages.ALIAS_NOT_FOUND)
         }
-        const result: AnalysticsResponse[] = await this.shortURLModel.aggregate([
+        const result: AnalysticsAliasResponse[] = await this.shortURLModel.aggregate([
             {
                 $lookup: {
                     from: 'analyticslogs',
@@ -193,4 +195,107 @@ export class AnalyticsService {
         return result[0]
     }
 
+    /**
+     * Function to create analytics report for topic provided
+     * @param topic 
+     * @returns AnalysticsAliasResponse
+     */
+    async getTopicAnalytics(topic: string): Promise<AnalysticsTopicResponse> {
+        let key: string = generateRedisCacheKey(`topic:${topic}`, RedisCacheNames.Analytics)
+
+        const cachedData: any = await this.redis.get(key);
+        if (cachedData) {
+            return cachedData
+        }
+
+        const topicRecord: ShortURL = await this.topicModel.findOne({ name: topic })
+
+        if (!topicRecord) {
+            throw new NotFoundException(analyticsErrorMessages.TOPIC_NOT_FOUND)
+        }
+
+        const result: AnalysticsTopicResponse[] = await this.shortURLModel.aggregate([
+            {
+                $lookup: {
+                    from: 'analyticslogs',
+                    as: 'analyticslogs',
+                    localField: '_id',
+                    foreignField: 'shortURLId',
+                }
+            },
+            {
+                $match: { topicId: topicRecord._id },
+            },
+            {
+                $unwind: "$analyticslogs"
+            },
+
+            {
+                $facet: {
+                    counts: [
+                        {
+                            $group: {
+                                _id: null,
+                                uniqueClicks: { $addToSet: "$analyticslogs.userId" },
+                                totalClicks: { $sum: 1 }
+                            }
+                        },
+                        {
+                            $project: {
+                                uniqueClicks: { $size: "$uniqueClicks" },
+                                totalClicks: 1,
+                                _id: 0
+                            }
+                        }
+                    ],
+                    clickByDate: [
+                        {
+                            $group: {
+                                _id: { $dateToString: { format: "%Y-%m-%d", date: "$analyticslogs.createdAt" } },
+                                totalClicks: { $sum: 1 }
+                            }
+                        },
+                        {
+                            $sort: { "_id": -1 }
+                        },
+                        {
+                            $project: {
+                                date: "$_id",
+                                clickCount: "$totalClicks",
+                                _id: 0
+                            }
+                        },
+                    ],
+                    urls: [
+                        {
+                            $group: {
+                                _id: "$shortURL",
+                                uniqueClicks: { $addToSet: "$analyticslogs.userId" },
+                                totalClicks: { $sum: 1 }
+                            }
+                        },
+                        {
+                            $project: {
+                                shortURL: "$_id",
+                                uniqueClicks: { $size: "$uniqueClicks" },
+                                totalClicks: 1,
+                                _id: 0
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                $project: {
+                    totalClicks: { $arrayElemAt: ["$counts.totalClicks", 0] },
+                    uniqueClicks: { $arrayElemAt: ["$counts.uniqueClicks", 0] },
+                    clickByDate: 1,
+                    urls: 1
+                }
+            }
+        ])
+        await this.redis.set(key, JSON.stringify(result[0]), 200)
+
+        return result[0]
+    }
 }
