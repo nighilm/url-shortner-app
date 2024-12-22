@@ -7,7 +7,8 @@ import { ShortURL } from "./entities/short-url.schema";
 import { CreateShortURLDto, ShortURLResponseDto } from "./dto/short-url.dto";
 import { RedisService } from "src/redis/redis.service";
 import ShortUniqueId from "short-unique-id";
-import { generateShortURLCacheKey } from "src/common/helpers/short-url.helpers";
+import { generateRedisCacheKey } from "../common/helpers/redis.helpers";
+import { RedisCacheNames } from "src/common/enum/cacheTypes.enum";
 
 @Injectable()
 export class ShortURLService {
@@ -51,6 +52,7 @@ export class ShortURLService {
      */
     async createShortURL(userId: string | Types.ObjectId, baseURL: string, { longURL, customAlias, topic }: CreateShortURLDto): Promise<ShortURLResponseDto> {
         userId = new Types.ObjectId(userId)
+        const topicId = new Types.ObjectId(topic)
         const { randomUUID } = new ShortUniqueId({ length: 8 });
 
         let alias: string = customAlias
@@ -79,16 +81,25 @@ export class ShortURLService {
         const shortURLCreate: ShortURL = await this.shortURLModel.create({
             longURL,
             userId,
+            shortURL,
             alias,
-            topic,
+            topicId,
         });
-        let key: string = generateShortURLCacheKey(alias)
+        let key: string = generateRedisCacheKey(alias, RedisCacheNames.ShortURL)
         await this.redis.set(key, JSON.stringify({ shortURLId: shortURLCreate.id, longURL }), 200)
+
+        const topicRecord: Topic = await this.topicModel.findById(topicId)
+        let redisKeyClear: string[] = [
+            `${RedisCacheNames.Analytics}:overall:${userId}`,
+            `${RedisCacheNames.Analytics}:topic:${topicRecord.name}`
+        ]
+        await this.redis.delMultiple(redisKeyClear)
+
         return { shortURL, createdAt: shortURLCreate.createdAt };
     }
 
-    async redirectShortURL(alias: string, request: any) {
-        let key: string = generateShortURLCacheKey(alias)
+    async redirectShortURL(alias: string) {
+        let key: string = generateRedisCacheKey(alias, RedisCacheNames.ShortURL)
 
         const cachedData: any = await this.redis.get(key);
         if (cachedData && cachedData?.longURL) {

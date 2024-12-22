@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { Document, Types } from "mongoose";
-import { User } from "../../../auth/entities/user.schema";
-import { ShortURL } from "../../entities/short-url.schema";
+import { User } from "../../auth/entities/user.schema";
+import { ShortURL } from "../../short-url/entities/short-url.schema";
 
 @Schema({ timestamps: true })
 export class AnalyticsLog extends Document {

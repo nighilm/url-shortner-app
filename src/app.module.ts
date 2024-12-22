@@ -9,12 +9,14 @@ import { envFileConfigOptions } from './configuration/environment.config';
 import { RedisModule } from './redis/redis.module';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { throttlerConfigOptions } from './configuration/throttler.config';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 @Module({
   imports: [
     AuthModule,
     UserModule,
     ShortURLModule,
+    AnalyticsModule,
     ConfigModule.forRoot(envFileConfigOptions),
     MongooseModule.forRootAsync(mongooseConnectOptions),
     RedisModule,
